@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -19,27 +19,99 @@ const client = new MongoClient(uri, {
   }
 });
 
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
 // app.get('/hello',(req,res)=>{
 //   res.send('how are you!')
 
 // })
 
+
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+
+    const db = client.db('freelance_db')
+    const jobsCollection = db.collection('jobs');
+
+    app.get('/jobs' ,async(req,res)=>{
+
+      console.log(req.query)
+      const email = req.query.email;
+      const query ={}
+      if(email){
+        query.userEmail = email;
+      }
+
+
+
+      const cursor = jobsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result)
+    });
+
+    app.get('/jobs/:id', async(req, res) =>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await jobsCollection.findOne(query);
+      res.send(result);
+
+    })
+
+    app.post('/jobs', async(req,res) => {
+      const newJob = req.body
+      const result = await jobsCollection.insertOne(newJob);
+      res.send(result);
+    })
+    app.patch('/jobs/:id', async(req,res)=>{
+      const id = req.params.id;
+      const updatedJob = req.body;
+      const query ={_id: new ObjectId(id) }
+      const update ={
+        $set: {
+          name:updatedJob.name,
+          price:updatedJob.price
+        }
+      }
+      const result = await jobsCollection.updateOne(query,update)
+      res.send(result)
+
+})
+    app.delete('/jobs/:id', async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await jobsCollection.deleteOne(query);
+      res.send(result);
+    })
+
+
+
+
+
+
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
+//     await client.db("admin").command({ ping: 1 });
+//     console.log("Pinged your deployment. You successfully connected to MongoDB!");
+//   } finally {
+//     // Ensures that the client will close when you finish/error
+//     await client.close();
+//   }
+// }
+// run().catch(console.dir);
+
+ // Confirm connection
+    await db.command({ ping: 1 });
+    console.log("✅ Successfully connected to MongoDB!");
+
+  } catch (err) {
+    console.error(err);
   }
 }
-run().catch(console.dir);
+
+run();
+
+
+app.get('/', (req, res) => {
+  res.send('Hello World!')
+})
 
 app.listen(port, () => {
   console.log(`server is listening on port ${port}`)
