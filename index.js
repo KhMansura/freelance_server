@@ -156,10 +156,19 @@ async function run() {
     });
 
     // ✅ Get latest 6 jobs
+    // app.get('/jobs/latest', async (req, res) => {
+    //   const result = await jobsCollection.find().sort({ _id: -1 }).limit(6).toArray();
+    //   res.send(result);
+    // });
     app.get('/jobs/latest', async (req, res) => {
-      const result = await jobsCollection.find().sort({ _id: -1 }).limit(6).toArray();
-      res.send(result);
-    });
+  try {
+    const result = await jobsCollection.find().sort({ _id: -1 }).limit(6).toArray();
+    res.send(result); // ✅ Always return an array
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+});
+
 
     // ✅ Get job by ID
     app.get('/jobs/:id', async (req, res) => {
