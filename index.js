@@ -55,12 +55,30 @@ async function run() {
     const acceptedCollection = db.collection('acceptedTasks');
 
     // ✅ Get all jobs or filter by user
-    app.get('/jobs', async (req, res) => {
-      const email = req.query.email;
-      const query = email ? { userEmail: email } : {};
-      const result = await jobsCollection.find(query).toArray();
-      res.send(result);
-    });
+    // app.get('/jobs', async (req, res) => {
+    //   const email = req.query.email;
+    //   const query = email ? { userEmail: email } : {};
+    //   const result = await jobsCollection.find(query).toArray();
+    //   res.send(result);
+    // });
+
+    // ✅ GET /jobs — supports ?sort=newest|oldest
+app.get('/jobs', async (req, res) => {
+  const { email, sort = 'newest' } = req.query;
+  const query = email ? { userEmail: email } : {};
+
+  // ✅ Sort by _id (ObjectId timestamp ≈ createdAt)
+  let sortOption = { _id: -1 }; // newest first
+  if (sort === 'oldest') sortOption = { _id: 1 };
+
+  try {
+    const result = await jobsCollection.find(query).sort(sortOption).toArray();
+    res.send(result);
+  } catch (err) {
+    console.error('Jobs fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch jobs' });
+  }
+});
 
     // ✅ Get latest 6 jobs
     app.get('/jobs/latest', async (req, res) => {
@@ -130,6 +148,7 @@ async function run() {
 
     // ✅ Accept a job
     app.post('/accept-job/:id',verifyToken, async (req, res) => {
+      console.log("user",req.user.email);
       const jobId = req.params.id;
 
       const job = await jobsCollection.findOne({ _id: new ObjectId(jobId) });
@@ -138,7 +157,7 @@ async function run() {
       // const { userEmail } = req.body;
       // const job = await jobsCollection.findOne({ _id: new ObjectId(jobId) });
 
-      if (job.userEmail === userEmail) {
+      if (job.userEmail === req.user.email) {
         return res.status(403).json({ error: "You can't accept your own job." });
       }
 
@@ -165,7 +184,7 @@ async function run() {
     });
 
     // ✅ Remove accepted task (DONE or CANCEL)
-    app.delete('/accepted-tasks/:id', async (req, res) => {
+    app.delete('/accepted-tasks/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
 
         const task = await acceptedCollection.findOne({ _id: new ObjectId(id) });
