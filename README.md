@@ -1,25 +1,42 @@
+# 🖥️ Freelance MarketPlace — Server API  
+> RESTful backend for the full-stack freelance job platform. Built with **Node.js, Express.js, and MongoDB Atlas**, with Firebase Auth integration.
+
+[![API Status](https://img.shields.io/badge/API_Status-Online-brightgreen?logo=vercel)](https://freelance-api.vercel.app)
+[![Client App](https://img.shields.io/badge/Frontend-Netlify-00C7B7?logo=netlify)](https://freelancehub.netlify.app)
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+
+🔗 **Live API**: [https://freelance-api.vercel.app](https://freelance-api.vercel.app)  
+🌐 **Client Repo**: [github.com/yourname/freelance_client](https://github.com/yourname/freelance_client)
 
 ---
 
-## 🧾 Server-Side `README.md`
+## 🌐 API Overview
 
-```markdown
-# Freelance MarketPlace (Server)
+A secure, scalable backend supporting:
+- ✅ Job CRUD operations (with ownership validation)
+- ✅ Firebase ID token authentication middleware
+- ✅ Acceptance workflow (`/accept-job`)
+- ✅ Protected routes for private actions
+- ✅ Environment-based configuration (`.env`)
 
-Live API: [https://freelancemarketplace-server.vercel.app](https://freelancemarketplace-server.vercel.app)
+Inspired by backend patterns from **[ThemeForest](https://themeforest.net/)** (robust, modular architecture) and security best practices from **[uiverse.io](https://uiverse.io/)**.
 
-## 🔥 Features
+---
 
-- 🧠 RESTful API for job and task management
-- 🔐 Firebase Auth-based route protection (client-side)
-- 📦 MongoDB Atlas integration for persistent data
-- ✅ Accept/Deny task logic with user validation
-- 🧹 Clean and scalable Express.js structure
+## 🚀 Key Features
 
-## 🛠 Tech Stack
+- 🔐 **Firebase Auth Integration**  
+  Middleware verifies `Authorization: Bearer <idToken>` using Firebase Admin SDK — no session storage, no JWT reinvention.
 
-- Node.js + Express.js
-- MongoDB Atlas
-- Firebase Admin SDK (optional)
-- CORS + dotenv
-
+- 📦 **Job Data Model (MongoDB)**  
+  ```js
+  {
+    title: String,
+    postedBy: String,     
+    category: String,
+    summary: String,
+    coverImage: String,   
+    userEmail: String,    
+    acceptedBy: [String], 
+    createdAt: Date
+  }

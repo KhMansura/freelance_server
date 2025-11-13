@@ -19,6 +19,23 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
+// 🔐 Middleware: Verify Firebase ID Token
+async function verifyToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: Missing token' });
+  }
+
+  const idToken = authHeader.split('Bearer ')[1];
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.user = decodedToken; // { uid, email, name, email_verified, ... }
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+}
+
 
 // MongoDB setup
 const uri = process.env.MONGODB_URI;
@@ -64,17 +81,31 @@ async function run() {
     });
 
     // ✅ Add a job
-    app.post('/jobs', async (req, res) => {
+    app.post('/jobs',verifyToken, async (req, res) => {
       const job = req.body;
-      job.createdAt = new Date();
+      // ✅ Enforce: userEmail must match token email
+  if (job.userEmail !== req.user.email) {
+    return res.status(403).json({ error: 'Forbidden: Email mismatch' });
+  }
+  job.createdAt = new Date();
       const result = await jobsCollection.insertOne(job);
-      res.send(result);
+      res.status(201).send(result);
     });
 
-    // ✅ Update a job
-    app.put('/jobs/:id', async (req, res) => {
+    // Update a job
+    app.put('/jobs/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       const updated = req.body;
+
+      // Fetch job first to check ownership
+  const job = await jobsCollection.findOne({ _id: new ObjectId(id) });
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  
+  if (job.userEmail !== req.user.email) {
+    return res.status(403).json({ error: 'Forbidden: You can only edit your own jobs' });
+  }
+
+
       const result = await jobsCollection.updateOne(
         { _id: new ObjectId(id) },
         { $set: updated }
@@ -83,20 +114,32 @@ async function run() {
     });
 
     // ✅ Delete a job
-    app.delete('/jobs/:id', async (req, res) => {
+    app.delete('/jobs/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
+
+      const job = await jobsCollection.findOne({ _id: new ObjectId(id) });
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+
+  if (job.userEmail !== req.user.email) {
+    return res.status(403).json({ error: 'Forbidden: You can only delete your own jobs' });
+  }
+
       const result = await jobsCollection.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     });
 
     // ✅ Accept a job
-    app.post('/accept-job/:id', async (req, res) => {
+    app.post('/accept-job/:id',verifyToken, async (req, res) => {
       const jobId = req.params.id;
-      const { userEmail } = req.body;
+
       const job = await jobsCollection.findOne({ _id: new ObjectId(jobId) });
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+
+      // const { userEmail } = req.body;
+      // const job = await jobsCollection.findOne({ _id: new ObjectId(jobId) });
 
       if (job.userEmail === userEmail) {
-        return res.status(403).send({ error: "You can't accept your own job." });
+        return res.status(403).json({ error: "You can't accept your own job." });
       }
 
       const acceptedTask = {
@@ -106,12 +149,12 @@ async function run() {
         summary: job.summary,
         coverImage: job.coverImage,
         postedBy: job.postedBy,
-        acceptedBy: userEmail,
+        acceptedBy: req.user.email,
         acceptedAt: new Date(),
       };
 
       const result = await acceptedCollection.insertOne(acceptedTask);
-      res.send(result);
+      res.status(201).send(result);
     });
 
     // ✅ Get accepted tasks
@@ -124,6 +167,15 @@ async function run() {
     // ✅ Remove accepted task (DONE or CANCEL)
     app.delete('/accepted-tasks/:id', async (req, res) => {
       const id = req.params.id;
+
+        const task = await acceptedCollection.findOne({ _id: new ObjectId(id) });
+
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  if (task.acceptedBy !== req.user.email) {
+    return res.status(403).json({ error: 'Forbidden: You can only remove your own accepted tasks' });
+  }
+
+
       const result = await acceptedCollection.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     });
