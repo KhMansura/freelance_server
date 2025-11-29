@@ -5,8 +5,8 @@
 [![Client App](https://img.shields.io/badge/Frontend-Netlify-00C7B7?logo=netlify)](https://freelancehub.netlify.app)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-🔗 **Live API**: [https://freelance-api.vercel.app](https://freelance-api.vercel.app)  
-🌐 **Client Repo**: [github.com/yourname/freelance_client](https://github.com/yourname/freelance_client)
+🔗 **Live API**: [https://freelance-server-ivory.vercel.app/](https://freelance-server-ivory.vercel.app/)  
+
 
 ---
 
