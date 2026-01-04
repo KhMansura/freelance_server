@@ -61,7 +61,7 @@ async function run() {
     const jobsCollection = db.collection('jobs');
     const acceptedCollection = db.collection('acceptedTasks');
 
-    // ✅ Get all jobs or filter by user
+    //  Get all jobs or filter by user
     // app.get('/jobs', async (req, res) => {
     //   const email = req.query.email;
     //   const query = email ? { userEmail: email } : {};
@@ -69,50 +69,132 @@ async function run() {
     //   res.send(result);
     // });
 
-    // ✅ GET /jobs — supports ?sort=newest|oldest
-app.get('/jobs', async (req, res) => {
-  const { email, sort = 'newest' } = req.query;
-  const query = email ? { userEmail: email } : {};
+    // GET /jobs — supports ?sort=newest|oldest
+// app.get('/jobs', async (req, res) => {
+//   const { email, sort = 'newest' } = req.query;
+//   const query = email ? { userEmail: email } : {};
 
-  // ✅ Sort by _id (ObjectId timestamp ≈ createdAt)
-  let sortOption = { _id: -1 }; // newest first
-  if (sort === 'oldest') sortOption = { _id: 1 };
+//   //  Sort by _id (ObjectId timestamp ≈ createdAt)
+//   let sortOption = { _id: -1 }; // newest first
+//   if (sort === 'oldest') sortOption = { _id: 1 };
 
+//   try {
+//     const result = await jobsCollection.find(query).sort(sortOption).toArray();
+//     res.send(result);
+//   } catch (err) {
+//     console.error('Jobs fetch error:', err);
+//     res.status(500).json({ error: 'Failed to fetch jobs' });
+//   }
+// });
+
+
+// app.get('/jobs', async (req, res) => {
+//   const { email, search, category, sort } = req.query;
+  
+//   // 1. Build the Query Object
+//   let query = {};
+
+//   // Filter by user email (for "My Jobs" page)
+//   if (email) {
+//     query.userEmail = email;
+//   }
+
+//   // Filter by Search Title (Requirement #5)
+//   if (search) {
+//     // 'i' makes it case-insensitive so "react" matches "React"
+//     query.title = { $regex: search, $options: 'i' };
+//   }
+
+//   // Filter by Category
+//   if (category) {
+//     query.category = category;
+//   }
+
+//   // 2. Build the Sort Options
+//   let sortOption = { _id: -1 }; // Default: Newest first
+  
+//   if (sort === 'oldest') sortOption = { _id: 1 };
+  
+//   // Requirement #5: Sort by price
+//   if (sort === 'price-asc') sortOption = { minPrice: 1 };
+//   if (sort === 'price-desc') sortOption = { minPrice: -1 };
+
+//   try {
+//     const result = await jobsCollection.find(query).sort(sortOption).toArray();
+//     res.send(result);
+//   } catch (err) {
+//     console.error('Jobs fetch error:', err);
+//     res.status(500).json({ error: 'Failed to fetch jobs' });
+//   }
+// });
+
+//     //  Get latest 8 jobs
+//     app.get('/jobs/latest', async (req, res) => {
+//   try {
+//     const result = await jobsCollection.find().sort({ _id: -1 }).limit(8).toArray();
+//     res.send(result);
+//   } catch (err) {
+//     res.status(500).send({ error: err.message });
+//   }
+// });
+
+
+//     // Get job by ID
+//     app.get('/jobs/:id', async (req, res) => {
+//       const id = req.params.id;
+//       const result = await jobsCollection.findOne({ _id: new ObjectId(id) });
+//       res.send(result);
+//     });
+// 1. Specific routes FIRST
+app.get('/jobs/latest', async (req, res) => {
   try {
-    const result = await jobsCollection.find(query).sort(sortOption).toArray();
-    res.send(result);
-  } catch (err) {
-    console.error('Jobs fetch error:', err);
-    res.status(500).json({ error: 'Failed to fetch jobs' });
-  }
-});
-
-    // ✅ Get latest 6 jobs
-    app.get('/jobs/latest', async (req, res) => {
-  try {
-    const result = await jobsCollection.find().sort({ _id: -1 }).limit(6).toArray();
+    const result = await jobsCollection.find().sort({ _id: -1 }).limit(8).toArray();
     res.send(result);
   } catch (err) {
     res.status(500).send({ error: err.message });
   }
 });
 
+// 2. Dynamic ID routes SECOND
+app.get('/jobs/:id', async (req, res) => {
+  const id = req.params.id;
+  const result = await jobsCollection.findOne({ _id: new ObjectId(id) });
+  res.send(result);
+});
 
-    // ✅ Get job by ID
-    app.get('/jobs/:id', async (req, res) => {
-      const id = req.params.id;
-      const result = await jobsCollection.findOne({ _id: new ObjectId(id) });
-      res.send(result);
-    });
+// 3. General filter/search routes LAST
+app.get('/jobs', async (req, res) => {
+  const { email, search, category, sort } = req.query;
+  let query = {};
+  if (email) query.userEmail = email;
+  if (search) query.title = { $regex: search, $options: 'i' };
+  if (category) query.category = category;
 
-    // ✅ Add a job
+  let sortOption = { _id: -1 };
+  if (sort === 'oldest') sortOption = { _id: 1 };
+  if (sort === 'price-asc') sortOption = { minPrice: 1 };
+  if (sort === 'price-desc') sortOption = { minPrice: -1 };
+
+
+  try {
+    const result = await jobsCollection.find(query).sort(sortOption).toArray();
+    res.send(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch jobs' });
+  }
+});
+
+    //  Add a job
     app.post('/jobs',verifyToken, async (req, res) => {
       const job = req.body;
-      // ✅ Enforce: userEmail must match token email
+job.minPrice = parseFloat(job.minPrice);
+job.maxPrice = parseFloat(job.maxPrice);
+      job.createdAt = new Date();
+      // Enforce: userEmail must match token email
   if (job.userEmail !== req.user.email) {
     return res.status(403).json({ error: 'Forbidden: Email mismatch' });
   }
-  job.createdAt = new Date();
+  
       const result = await jobsCollection.insertOne(job);
       res.status(201).send(result);
     });
@@ -138,7 +220,7 @@ app.get('/jobs', async (req, res) => {
       res.send(result);
     });
 
-    // ✅ Delete a job
+    //  Delete a job
     app.delete('/jobs/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
 
@@ -153,7 +235,7 @@ app.get('/jobs', async (req, res) => {
       res.send(result);
     });
 
-    // ✅ Accept a job
+    //  Accept a job
     app.post('/accept-job/:id',verifyToken, async (req, res) => {
       console.log("user",req.user.email);
       const jobId = req.params.id;
@@ -183,14 +265,14 @@ app.get('/jobs', async (req, res) => {
       res.status(201).send(result);
     });
 
-    // ✅ Get accepted tasks
+    //  Get accepted tasks
     app.get('/accepted-tasks', async (req, res) => {
       const email = req.query.email;
       const result = await acceptedCollection.find({ acceptedBy: email }).toArray();
       res.send(result);
     });
 
-    // ✅ Remove accepted task (DONE or CANCEL)
+    //  Remove accepted task (DONE or CANCEL)
     app.delete('/accepted-tasks/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
 
@@ -206,7 +288,7 @@ app.get('/jobs', async (req, res) => {
       res.send(result);
     });
 
-    // ✅ Ping
+    //  Ping
     // await db.command({ ping: 1 });
     console.log("✅ Connected to MongoDB!");
   } catch (err) {
