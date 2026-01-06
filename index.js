@@ -20,6 +20,17 @@ app.use(express.json());
 // app.use(express.json());
 
 
+app.use(cors({
+  origin: [
+    "http://localhost:5173", 
+    "https://freelance-hub-a10.netlify.app",
+    "https://freelance-server-ivory.vercel.app" 
+  ],
+  credentials: true
+}));
+app.use(express.json());
+
+
 
 
 admin.initializeApp({
@@ -88,65 +99,48 @@ async function run() {
 // });
 
 
-// app.get('/jobs', async (req, res) => {
-//   const { email, search, category, sort } = req.query;
+app.get('/jobs', async (req, res) => {
+  const { email, search, category, sort } = req.query;
   
-//   // 1. Build the Query Object
-//   let query = {};
+  // 1. Build the Query Object
+  let query = {};
 
-//   // Filter by user email (for "My Jobs" page)
-//   if (email) {
-//     query.userEmail = email;
-//   }
+  // Filter by user email 
+  if (email) {
+    query.userEmail = email;
+  }
 
-//   // Filter by Search Title (Requirement #5)
-//   if (search) {
-//     // 'i' makes it case-insensitive so "react" matches "React"
-//     query.title = { $regex: search, $options: 'i' };
-//   }
+  // Filter by Search Title 
+  if (search) {
+    
+    query.title = { $regex: search, $options: 'i' };
+  }
 
-//   // Filter by Category
-//   if (category) {
-//     query.category = category;
-//   }
+  // Filter by Category
+  if (category) {
+    query.category = category;
+  }
 
-//   // 2. Build the Sort Options
-//   let sortOption = { _id: -1 }; // Default: Newest first
+  // 2. Build the Sort Options
+  let sortOption = { _id: -1 }; 
   
-//   if (sort === 'oldest') sortOption = { _id: 1 };
-  
-//   // Requirement #5: Sort by price
-//   if (sort === 'price-asc') sortOption = { minPrice: 1 };
-//   if (sort === 'price-desc') sortOption = { minPrice: -1 };
+  if (sort === 'oldest') sortOption = { _id: 1 };
 
-//   try {
-//     const result = await jobsCollection.find(query).sort(sortOption).toArray();
-//     res.send(result);
-//   } catch (err) {
-//     console.error('Jobs fetch error:', err);
-//     res.status(500).json({ error: 'Failed to fetch jobs' });
-//   }
-// });
+  // Sort by price
+  if (sort === 'price-asc') sortOption = { minPrice: 1 };
+  if (sort === 'price-desc') sortOption = { minPrice: -1 };
 
-//     //  Get latest 8 jobs
-//     app.get('/jobs/latest', async (req, res) => {
-//   try {
-//     const result = await jobsCollection.find().sort({ _id: -1 }).limit(8).toArray();
-//     res.send(result);
-//   } catch (err) {
-//     res.status(500).send({ error: err.message });
-//   }
-// });
+  try {
+    const result = await jobsCollection.find(query).sort(sortOption).toArray();
+    res.send(result);
+  } catch (err) {
+    console.error('Jobs fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch jobs' });
+  }
+});
 
-
-//     // Get job by ID
-//     app.get('/jobs/:id', async (req, res) => {
-//       const id = req.params.id;
-//       const result = await jobsCollection.findOne({ _id: new ObjectId(id) });
-//       res.send(result);
-//     });
-// 1. Specific routes FIRST
-app.get('/jobs/latest', async (req, res) => {
+    //  Get latest 8 jobs
+    app.get('/jobs/latest', async (req, res) => {
   try {
     const result = await jobsCollection.find().sort({ _id: -1 }).limit(8).toArray();
     res.send(result);
@@ -155,34 +149,51 @@ app.get('/jobs/latest', async (req, res) => {
   }
 });
 
-// 2. Dynamic ID routes SECOND
-app.get('/jobs/:id', async (req, res) => {
-  const id = req.params.id;
-  const result = await jobsCollection.findOne({ _id: new ObjectId(id) });
-  res.send(result);
-});
 
-// 3. General filter/search routes LAST
-app.get('/jobs', async (req, res) => {
-  const { email, search, category, sort } = req.query;
-  let query = {};
-  if (email) query.userEmail = email;
-  if (search) query.title = { $regex: search, $options: 'i' };
-  if (category) query.category = category;
+    // Get job by ID
+    app.get('/jobs/:id', async (req, res) => {
+      const id = req.params.id;
+      const result = await jobsCollection.findOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+// // 1. Specific routes FIRST
+// app.get('/jobs/latest', async (req, res) => {
+//   try {
+//     const result = await jobsCollection.find().sort({ _id: -1 }).limit(8).toArray();
+//     res.send(result);
+//   } catch (err) {
+//     res.status(500).send({ error: err.message });
+//   }
+// });
 
-  let sortOption = { _id: -1 };
-  if (sort === 'oldest') sortOption = { _id: 1 };
-  if (sort === 'price-asc') sortOption = { minPrice: 1 };
-  if (sort === 'price-desc') sortOption = { minPrice: -1 };
+// // 2. Dynamic ID routes SECOND
+// app.get('/jobs/:id', async (req, res) => {
+//   const id = req.params.id;
+//   const result = await jobsCollection.findOne({ _id: new ObjectId(id) });
+//   res.send(result);
+// });
+
+// // 3. General filter/search routes LAST
+// app.get('/jobs', async (req, res) => {
+//   const { email, search, category, sort } = req.query;
+//   let query = {};
+//   if (email) query.userEmail = email;
+//   if (search) query.title = { $regex: search, $options: 'i' };
+//   if (category) query.category = category;
+
+//   let sortOption = { _id: -1 };
+//   if (sort === 'oldest') sortOption = { _id: 1 };
+//   if (sort === 'price-asc') sortOption = { minPrice: 1 };
+//   if (sort === 'price-desc') sortOption = { minPrice: -1 };
 
 
-  try {
-    const result = await jobsCollection.find(query).sort(sortOption).toArray();
-    res.send(result);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch jobs' });
-  }
-});
+//   try {
+//     const result = await jobsCollection.find(query).sort(sortOption).toArray();
+//     res.send(result);
+//   } catch (err) {
+//     res.status(500).json({ error: 'Failed to fetch jobs' });
+//   }
+// });
 
     //  Add a job
     app.post('/jobs',verifyToken, async (req, res) => {
